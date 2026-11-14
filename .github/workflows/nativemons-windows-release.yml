@@ -54,9 +54,10 @@ jobs:
       - name: Build
         # AzaharPlus keeps its own build scripts in build\ and builds inside it (its build/winconf), so Azahar's
         # .ci/windows.sh (mkdir build) can't be used.
+        # FFmpeg only serves its video dumper, and AzaharPlus gets it from MSYS2, which this MSVC build has no copy of.
         run: |
           cd build
-          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF
           ninja
           ninja bundle
           ccache -s
