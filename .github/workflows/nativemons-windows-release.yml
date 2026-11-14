@@ -57,7 +57,7 @@ jobs:
         run: |
           cd build
           cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF -DCMAKE_CXX_FLAGS="-include vector"
-          ninja
+          ninja -k 0
           ninja bundle
           strip -s bundle/*.exe
           ccache -s
