@@ -62,6 +62,8 @@ jobs:
           ninja -k 0
           ninja bundle
           strip -s bundle/*.exe
+          # MSYS2's SDL2 is sdl2-compat, which loads SDL3 at run time, so the bundle step doesn't see it.
+          if [ -f /clang64/bin/SDL3.dll ]; then cp /clang64/bin/SDL3.dll bundle/; fi
           ccache -s
       - name: Save the compile cache
         # Saved even when the build fails, so a retry doesn't start cold.
@@ -77,6 +79,7 @@ jobs:
           rm -rf dist && mkdir -p dist/azaharplus
           cp -r build/bundle/* dist/azaharplus/
           ls dist/azaharplus/*.exe
+          if [ -f dist/azaharplus/SDL2.dll ] && ! [ -f dist/azaharplus/SDL3.dll ] && grep -q SDL3 dist/azaharplus/SDL2.dll; then echo "SDL2.dll needs SDL3.dll"; exit 1; fi
           cp LICENSE.txt dist/azaharplus/LICENSE-azaharplus.txt
           # The notices AzaharPlus's own package carries (its build/winpack).
           cp the_azahar_logo_is_the_property_of_PabloMK7_and_angyartanddraw.txt dist/azaharplus/
