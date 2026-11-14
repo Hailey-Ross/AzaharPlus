@@ -49,15 +49,16 @@ jobs:
           update: true
           install: git make p7zip
           pacboy: >-
-            toolchain:p ccache:p cmake:p ninja:p spirv-tools:p zlib:p
+            toolchain:p ccache:p cmake:p ninja:p spirv-tools:p zlib:p SDL2:p
             qt6-base:p qt6-multimedia:p qt6-multimedia-wmf:p qt6-tools:p qt6-translations:p
       - name: Build
         # Inside build\, as AzaharPlus's own build/winconf does (its .ci/windows.sh can't: build\ already exists).
         # FFmpeg only serves its video dumper. Newer MSYS2 headers: dynarmic needs <vector> and httplib <exception>
         # included for them, and libressl's htobe32/64 are plain byte swaps on x86-64.
+        # MSYS2's own SDL2: the bundled one, built here, saw no controller at all (no "Device added" in the log).
         run: |
           cd build
-          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF -DCMAKE_CXX_FLAGS="-include vector -include exception" -DCMAKE_C_FLAGS="-Dhtobe32=__builtin_bswap32 -Dhtobe64=__builtin_bswap64"
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF -DUSE_SYSTEM_SDL2=ON -DCMAKE_CXX_FLAGS="-include vector -include exception" -DCMAKE_C_FLAGS="-Dhtobe32=__builtin_bswap32 -Dhtobe64=__builtin_bswap64"
           ninja -k 0
           ninja bundle
           strip -s bundle/*.exe
