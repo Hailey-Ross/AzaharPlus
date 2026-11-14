@@ -5763,16 +5763,18 @@ void GMainWindow::OnSwitchDiskResources(VideoCore::LoadCallbackStage stage, std:
 }
 
 void GMainWindow::UpdateWindowTitle() {
-    const QString full_name = QString::fromUtf8(Common::g_build_fullname);
+    // nativeMons: our build and the commit it was built from, as in its release tag (windows-<commit>).
+    const QString full_name = QStringLiteral("AzaharPlus-nativeMons %1")
+                                  .arg(QString::fromUtf8(Common::g_scm_rev).left(9));
 
     if (game_title.isEmpty()) {
-        setWindowTitle(QStringLiteral("Azahar %1").arg(full_name));
+        setWindowTitle(full_name);
     } else {
-        setWindowTitle(QStringLiteral("Azahar %1 | %2").arg(full_name, game_title));
+        setWindowTitle(QStringLiteral("%1 | %2").arg(full_name, game_title));
         render_window->setWindowTitle(
-            QStringLiteral("Azahar %1 | %2 | %3").arg(full_name, game_title, tr("Primary Window")));
-        secondary_window->setWindowTitle(QStringLiteral("Azahar %1 | %2 | %3")
-                                             .arg(full_name, game_title, tr("Secondary Window")));
+            QStringLiteral("%1 | %2 | %3").arg(full_name, game_title, tr("Primary Window")));
+        secondary_window->setWindowTitle(
+            QStringLiteral("%1 | %2 | %3").arg(full_name, game_title, tr("Secondary Window")));
     }
 }
 
