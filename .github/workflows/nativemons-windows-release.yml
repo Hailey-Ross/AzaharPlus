@@ -53,10 +53,10 @@ jobs:
             qt6-base:p qt6-multimedia:p qt6-multimedia-wmf:p qt6-tools:p qt6-translations:p
       - name: Build
         # Inside build\, as AzaharPlus's own build/winconf does (its .ci/windows.sh can't: build\ already exists).
-        # FFmpeg only serves its video dumper.
+        # FFmpeg only serves its video dumper. Newer libc++ no longer pulls <vector> in for dynarmic's ir_emitter.h.
         run: |
           cd build
-          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF -DCMAKE_CXX_FLAGS="-include vector"
           ninja
           ninja bundle
           strip -s bundle/*.exe
