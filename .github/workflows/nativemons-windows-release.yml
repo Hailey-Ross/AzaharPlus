@@ -52,7 +52,14 @@ jobs:
       - name: Disable line ending translation
         run: git config --global core.autocrlf input
       - name: Build
-        run: ./.ci/windows.sh
+        # AzaharPlus keeps its own build scripts in build\ and builds inside it (its build/winconf), so Azahar's
+        # .ci/windows.sh (mkdir build) can't be used.
+        run: |
+          cd build
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON
+          ninja
+          ninja bundle
+          ccache -s
 
       - name: Package
         run: |
@@ -60,6 +67,9 @@ jobs:
           cp -r build/bundle/* dist/azaharplus/
           ls dist/azaharplus/*.exe
           cp LICENSE.txt dist/azaharplus/LICENSE-azaharplus.txt
+          # The notices AzaharPlus's own package carries (its build/winpack).
+          cp the_azahar_logo_is_the_property_of_PabloMK7_and_angyartanddraw.txt dist/azaharplus/
+          cp externals/libzip/LICENSE dist/azaharplus/libzip_license.txt
           printf 'AzaharPlus-modified (nativeMons), without its system-file downloader\nBased on AzaharPlus %s (https://github.com/AzaharPlus/AzaharPlus)\nSource: https://github.com/%s/tree/%s\n' \
             "$UPSTREAM_TAG" "$GITHUB_REPOSITORY" "$GITHUB_SHA" > dist/azaharplus/NATIVEMONS-BUILD.txt
           if find dist -iregex '.*\.\(3ds\|cci\|cia\|cxi\|app\|sav\)$' | grep .; then echo "Game data in the package"; exit 1; fi
