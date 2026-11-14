@@ -1,0 +1,76 @@
+# Builds AzaharPlus for Windows the way upstream does (MSVC), without its system-file downloader, and publishes it
+# for the nativeMons launcher. No games, keys or system files are included: players use dumps of their own cartridges.
+name: Windows release
+
+on:
+  push:
+    branches: [hails-additions]
+    paths-ignore: ["**.md", "dist/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+    env:
+      # The upstream release hails-additions follows (update it with each sync to a new tag).
+      UPSTREAM_TAG: AZAHAR_PLUS_2126_2_A
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_COMPILERCHECK: content
+      CCACHE_SLOPPINESS: time_macros
+      OS: windows
+      TARGET: msvc
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-msvc-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-msvc-
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Install extra tools
+        run: choco install ccache ninja wget
+      - name: Install vulkan-sdk
+        run: |
+          wget https://sdk.lunarg.com/sdk/download/1.4.304.1/windows/VulkanSDK-1.4.304.1-Installer.exe -O D:/a/_temp/vulkan.exe
+          D:/a/_temp/vulkan.exe --accept-licenses --default-answer --confirm-command install
+      - name: Disable line ending translation
+        run: git config --global core.autocrlf input
+      - name: Build
+        run: ./.ci/windows.sh
+
+      - name: Package
+        run: |
+          rm -rf dist && mkdir -p dist/azaharplus
+          cp -r build/bundle/* dist/azaharplus/
+          ls dist/azaharplus/*.exe
+          cp LICENSE.txt dist/azaharplus/LICENSE-azaharplus.txt
+          printf 'AzaharPlus-modified (nativeMons), without its system-file downloader\nBased on AzaharPlus %s (https://github.com/AzaharPlus/AzaharPlus)\nSource: https://github.com/%s/tree/%s\n' \
+            "$UPSTREAM_TAG" "$GITHUB_REPOSITORY" "$GITHUB_SHA" > dist/azaharplus/NATIVEMONS-BUILD.txt
+          if find dist -iregex '.*\.\(3ds\|cci\|cia\|cxi\|app\|sav\)$' | grep .; then echo "Game data in the package"; exit 1; fi
+          (cd dist && powershell -NoProfile -Command "Compress-Archive -Path azaharplus -DestinationPath azaharplus-nativemons-windows-x64.zip")
+          ls -la dist
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="windows-${GITHUB_SHA:0:9}"
+          gh release create "$tag" dist/azaharplus-nativemons-windows-x64.zip \
+            --target "$GITHUB_SHA" --title "Windows build ($tag)" \
+            --notes "AzaharPlus-modified (nativeMons), based on AzaharPlus $UPSTREAM_TAG, without its system-file downloader, for the nativeMons launcher. Built from this commit; source and license are in this repository. No games, keys or system files are included."
