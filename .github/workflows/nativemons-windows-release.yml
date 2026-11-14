@@ -1,5 +1,5 @@
-# Builds AzaharPlus for Windows the way upstream does (MSVC), without its system-file downloader, and publishes it
-# for the nativeMons launcher. No games, keys or system files are included: players use dumps of their own cartridges.
+# Builds AzaharPlus for Windows as its own releases are built (MSYS2 Clang64, inside build\), without its
+# system-file downloader, and publishes it for the nativeMons launcher. No games, keys or system files are included.
 name: Windows release
 
 on:
@@ -21,48 +21,49 @@ jobs:
     timeout-minutes: 180
     defaults:
       run:
-        shell: bash
+        shell: msys2 {0}
     env:
       # The upstream release hails-additions follows (update it with each sync to a new tag).
       UPSTREAM_TAG: AZAHAR_PLUS_2126_2_A
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_COMPILERCHECK: content
       CCACHE_SLOPPINESS: time_macros
-      OS: windows
-      TARGET: msvc
     steps:
-      - uses: actions/checkout@v6
+      - name: Disable line ending translation
+        shell: bash
+        run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Set up cache
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-msvc-${{ github.sha }}
+          key: ${{ runner.os }}-msys2-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-msvc-
-      - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-      - name: Install extra tools
-        run: choco install ccache ninja wget
-      - name: Install vulkan-sdk
-        run: |
-          wget https://sdk.lunarg.com/sdk/download/1.4.304.1/windows/VulkanSDK-1.4.304.1-Installer.exe -O D:/a/_temp/vulkan.exe
-          D:/a/_temp/vulkan.exe --accept-licenses --default-answer --confirm-command install
-      - name: Disable line ending translation
-        run: git config --global core.autocrlf input
+            ${{ runner.os }}-msys2-
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: clang64
+          update: true
+          install: git make p7zip
+          pacboy: >-
+            toolchain:p ccache:p cmake:p ninja:p spirv-tools:p zlib:p
+            qt6-base:p qt6-multimedia:p qt6-multimedia-wmf:p qt6-tools:p qt6-translations:p
       - name: Build
-        # AzaharPlus keeps its own build scripts in build\ and builds inside it (its build/winconf), so Azahar's
-        # .ci/windows.sh (mkdir build) can't be used.
-        # FFmpeg only serves its video dumper, and AzaharPlus gets it from MSYS2, which this MSVC build has no copy of.
+        # Inside build\, as AzaharPlus's own build/winconf does (its .ci/windows.sh can't: build\ already exists).
+        # FFmpeg only serves its video dumper.
         run: |
           cd build
           cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF
           ninja
           ninja bundle
+          strip -s bundle/*.exe
           ccache -s
 
       - name: Package
+        shell: bash
         run: |
           rm -rf dist && mkdir -p dist/azaharplus
           cp -r build/bundle/* dist/azaharplus/
@@ -78,6 +79,7 @@ jobs:
           ls -la dist
 
       - name: Publish
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
