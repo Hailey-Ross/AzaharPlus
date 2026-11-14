@@ -35,8 +35,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Set up cache
-        uses: actions/cache@v4
+      - name: Restore the compile cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-msys2-${{ github.sha }}
@@ -58,11 +58,18 @@ jobs:
         # MSYS2's own SDL2: the bundled one, built here, saw no controller at all (no "Device added" in the log).
         run: |
           cd build
-          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF -DUSE_SYSTEM_SDL2=ON -DCMAKE_CXX_FLAGS="-include vector -include exception" -DCMAKE_C_FLAGS="-Dhtobe32=__builtin_bswap32 -Dhtobe64=__builtin_bswap64"
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_QT_TRANSLATION=ON -DENABLE_FFMPEG=OFF -DUSE_SYSTEM_SDL2=ON -DENABLE_TESTS=OFF -DCMAKE_CXX_FLAGS="-include vector -include exception" -DCMAKE_C_FLAGS="-Dhtobe32=__builtin_bswap32 -Dhtobe64=__builtin_bswap64"
           ninja -k 0
           ninja bundle
           strip -s bundle/*.exe
           ccache -s
+      - name: Save the compile cache
+        # Saved even when the build fails, so a retry doesn't start cold.
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-msys2-${{ github.sha }}
 
       - name: Package
         shell: bash
