@@ -33,8 +33,10 @@ jobs:
         shell: bash
         run: git config --global core.autocrlf input
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      # Submodules several at a time: checkout fetches them one by one.
+      - name: Fetch submodules
+        shell: bash
+        run: git submodule update --init --recursive --depth 1 --jobs 8
       - name: Restore the compile cache
         uses: actions/cache/restore@v4
         with:
