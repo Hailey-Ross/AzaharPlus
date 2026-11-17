@@ -32,13 +32,13 @@ jobs:
       - name: Disable line ending translation
         shell: bash
         run: git config --global core.autocrlf input
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       # Submodules several at a time: checkout fetches them one by one.
       - name: Fetch submodules
         shell: bash
         run: git submodule update --init --recursive --depth 1 --jobs 8
       - name: Restore the compile cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-msys2-${{ github.sha }}
@@ -70,7 +70,7 @@ jobs:
       - name: Save the compile cache
         # Saved even when the build fails, so a retry doesn't start cold.
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-msys2-${{ github.sha }}
